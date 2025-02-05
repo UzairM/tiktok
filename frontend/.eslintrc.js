@@ -8,7 +8,8 @@ module.exports = {
     {
       files: ['*.ts', '*.tsx', '*.d.ts'],
       parserOptions: {
-        project: ['./tsconfig.json', './frontend/tsconfig.json']
+        tsconfigRootDir: __dirname,
+        project: ['tsconfig.json']
       },
       extends: ['plugin:@typescript-eslint/recommended'],
     },
