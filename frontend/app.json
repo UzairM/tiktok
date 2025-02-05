@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "TikTok Clone",
+    "slug": "tiktok-clone",
+    "jsEngine": "hermes",
+    "newArchEnabled": true,
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "jsEngine": "hermes",
+      "bundleIdentifier": "com.uzair.mahmud.tiktokclone"
+    },
+    "android": {
+      "jsEngine": "hermes",
+      "package": "com.uzair.mahmud.tiktokclone",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    "plugins": [
+      "expo-system-ui",
+      "expo-screen-orientation",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos"
+        }
+      ]
+    ]
+  }
+}

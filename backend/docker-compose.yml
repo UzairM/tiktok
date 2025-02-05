@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  video-service:
+    build:
+      context: ./video-service
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_USE_SSL=false
+      - MINIO_BUCKET_NAME=videos
+    depends_on:
+      - minio
+    volumes:
+      - ./video-service:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm run dev
+
+  minio:
+    image: minio/minio
+    ports:
+      - "9000:9000"  # API
+      - "9001:9001"  # Console
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    volumes:
+      - minio_data:/data
+    command: server --console-address ":9001" /data
+
+volumes:
+  minio_data: 
