@@ -4,11 +4,13 @@ import * as ImagePicker from 'expo-image-picker';
 import { AnimatedButton } from '../components/ui';
 import { uploadVideo } from '../api/videos';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../navigation/types';
 
 export function UploadScreen() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   useEffect(() => {
     (async () => {
@@ -43,7 +45,8 @@ export function UploadScreen() {
           setUploadProgress(progress);
         });
 
-        navigation.goBack();
+        setIsUploading(false);
+        navigation.navigate('Profile');
       }
     } catch (error) {
       console.error('Upload error:', error);
