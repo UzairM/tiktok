@@ -60,7 +60,6 @@ export class WorkerService {
         await this.processor.processVideo({
           videoId: videoDoc.id,
           inputPath,
-          outputKey: `videos/${videoDoc.id}/processed.mp4`,
         });
 
         console.log('Video processed successfully:', videoDoc.id);

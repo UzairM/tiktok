@@ -31,4 +31,5 @@ export interface StorageConfig {
   accessKey: string;
   secretKey: string;
   useSSL: boolean;
+  cloudFrontDomain?: string;
 } 

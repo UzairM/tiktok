@@ -98,9 +98,9 @@ export function VideoPlayer({
         ref={videoRef}
         source={{ 
           uri: video.url,
+          overrideFileExtensionAndroid: 'm3u8',
           headers: {
-            'Accept': 'video/mp4',
-            'Content-Type': 'video/mp4',
+            'Accept': '*/*',
           }
         }}
         style={StyleSheet.absoluteFill}
@@ -110,6 +110,8 @@ export function VideoPlayer({
         isMuted={isMuted}
         onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
         onError={handleError}
+        useNativeControls={false}
+        progressUpdateIntervalMillis={500}
       />
       {isLoading && (
         <View style={styles.loadingContainer}>
