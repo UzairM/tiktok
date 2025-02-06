@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Pressable } from 'react-native';
 import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import { useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LikeButton } from './LikeButton';
 import { VideoOverlay } from './VideoOverlay';
 import type { VideoMetadata } from '../../types/video';
@@ -32,7 +33,11 @@ export function VideoPlayer({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const lastTap = useRef<number>(0);
+
+  // Calculate height accounting for tab bar (which is typically 49px) and bottom inset
+  const videoHeight = windowHeight - (49 + insets.bottom);
 
   useEffect(() => {
     if (videoRef.current) {
@@ -76,7 +81,7 @@ export function VideoPlayer({
 
   if (error) {
     return (
-      <View style={[styles.container, { height: windowHeight }]}>
+      <View style={[styles.container, { height: videoHeight }]}>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
         </View>
@@ -86,7 +91,7 @@ export function VideoPlayer({
 
   return (
     <Pressable 
-      style={[styles.container, { height: windowHeight }]} 
+      style={[styles.container, { height: videoHeight }]} 
       onPress={handlePress}
     >
       <Video

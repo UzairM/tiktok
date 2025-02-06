@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { View, FlatList, StyleSheet, ActivityIndicator, Text, ViewToken } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, FlatList, StyleSheet, ActivityIndicator, Text, ViewToken, useWindowDimensions } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useIsFocused } from '@react-navigation/native';
 import { VideoPlayer } from '../components/video/VideoPlayer';
 import { useVideos } from '../hooks/useVideos';
@@ -18,6 +18,11 @@ export function FeedScreen() {
   const [activeVideoIndex, setActiveVideoIndex] = useState(0);
   const isFocused = useIsFocused();
   const flatListRef = useRef<FlatList>(null);
+  const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+
+  // Calculate height accounting for tab bar and bottom inset
+  const videoHeight = windowHeight - (49 + insets.bottom);
 
   const viewabilityConfig = useRef({
     itemVisiblePercentThreshold: 50,
@@ -83,10 +88,11 @@ export function FeedScreen() {
         onEndReached={fetchNextPage}
         onEndReachedThreshold={0.5}
         getItemLayout={(_, index) => ({
-          length: flatListRef.current?.getScrollableNode().clientHeight || 0,
-          offset: (flatListRef.current?.getScrollableNode().clientHeight || 0) * index,
+          length: videoHeight,
+          offset: videoHeight * index,
           index,
         })}
+        snapToInterval={videoHeight}
       />
     </SafeAreaView>
   );
