@@ -35,43 +35,27 @@ export function VideoPlayer({
   const lastTap = useRef<number>(0);
 
   useEffect(() => {
-    console.log('Video URL:', video.url); // Debug log
-    console.log('Video metadata:', video); // Debug log
-  }, [video]);
-
-  useEffect(() => {
     if (videoRef.current) {
       if (shouldPlay) {
-        videoRef.current.playAsync().catch(err => {
-          console.error('Play error:', err); // Debug log
-          setError(err.message);
-        });
+        videoRef.current.playAsync().catch(console.error);
       } else {
         videoRef.current.pauseAsync().catch(console.error);
       }
     }
-
-    return () => {
-      if (videoRef.current) {
-        videoRef.current.unloadAsync().catch(console.error);
-      }
-    };
   }, [shouldPlay]);
 
   const handlePlaybackStatusUpdate = (status: AVPlaybackStatus) => {
-    console.log('Playback status:', status); // Debug log
     if (status.isLoaded) {
       setIsLoading(false);
       if (status.didJustFinish) {
         videoRef.current?.replayAsync().catch(console.error);
       }
-    } else if ('error' in status) {
+    } else {
       setError(status.error || 'Failed to load video');
     }
   };
 
   const handleError = (error: VideoError | string) => {
-    console.error('Video error:', error); // Debug log
     if (typeof error === 'string') {
       setError(error);
     } else {
@@ -101,7 +85,10 @@ export function VideoPlayer({
   }
 
   return (
-    <Pressable onPress={handlePress} style={[styles.container, { height: windowHeight }]}>
+    <Pressable 
+      style={[styles.container, { height: windowHeight }]} 
+      onPress={handlePress}
+    >
       <Video
         ref={videoRef}
         source={{ 
@@ -113,27 +100,22 @@ export function VideoPlayer({
         }}
         style={StyleSheet.absoluteFill}
         resizeMode={ResizeMode.COVER}
+        shouldPlay={shouldPlay}
         isLooping
         isMuted={isMuted}
         onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
-        onError={handleError as (error: string) => void}
-        useNativeControls={false}
-        shouldPlay={shouldPlay}
-        progressUpdateIntervalMillis={500}
+        onError={handleError}
       />
-      
       {isLoading && (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#ffffff" />
+          <ActivityIndicator size="large" color="#fff" />
         </View>
       )}
-
       <VideoOverlay
         username={video.username}
         description={video.description}
         likes={video.likes}
       />
-
       <LikeButton
         isLiked={video.isLiked}
         onPress={onLike}
@@ -166,6 +148,6 @@ const styles = StyleSheet.create({
   likeButton: {
     position: 'absolute',
     right: 16,
-    bottom: '40%',
+    bottom: 100,
   },
 }); 

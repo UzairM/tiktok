@@ -24,16 +24,6 @@ export function FeedScreen() {
     waitForInteraction: false,
   }).current;
 
-  useEffect(() => {
-    if (isFocused && flatListRef.current && videos.length > 0) {
-      // Force re-render of current item when screen comes into focus
-      flatListRef.current.scrollToOffset({
-        offset: activeVideoIndex * flatListRef.current.getScrollableNode().clientHeight,
-        animated: false
-      });
-    }
-  }, [isFocused, activeVideoIndex, videos.length]);
-
   const handleViewableItemsChanged = useRef(({ viewableItems }: ViewableItemsChanged) => {
     if (viewableItems.length > 0) {
       const index = viewableItems[0].index ?? 0;
@@ -97,7 +87,6 @@ export function FeedScreen() {
           offset: (flatListRef.current?.getScrollableNode().clientHeight || 0) * index,
           index,
         })}
-        removeClippedSubviews={false}
       />
     </SafeAreaView>
   );
