@@ -1,6 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { View, FlatList, StyleSheet, ActivityIndicator, Text, ViewToken } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useIsFocused } from '@react-navigation/native';
 import { VideoPlayer } from '../components/video/VideoPlayer';
 import { useVideos } from '../hooks/useVideos';
 import { useLike } from '../hooks/useLike';
@@ -15,13 +16,28 @@ export function FeedScreen() {
   const { videos, isLoading, error, fetchNextPage } = useVideos();
   const { toggleLike } = useLike();
   const [activeVideoIndex, setActiveVideoIndex] = useState(0);
+  const isFocused = useIsFocused();
+  const flatListRef = useRef<FlatList>(null);
+
   const viewabilityConfig = useRef({
     itemVisiblePercentThreshold: 50,
+    waitForInteraction: false,
   }).current;
+
+  useEffect(() => {
+    if (isFocused && flatListRef.current && videos.length > 0) {
+      // Force re-render of current item when screen comes into focus
+      flatListRef.current.scrollToOffset({
+        offset: activeVideoIndex * flatListRef.current.getScrollableNode().clientHeight,
+        animated: false
+      });
+    }
+  }, [isFocused, activeVideoIndex, videos.length]);
 
   const handleViewableItemsChanged = useRef(({ viewableItems }: ViewableItemsChanged) => {
     if (viewableItems.length > 0) {
-      setActiveVideoIndex(viewableItems[0].index ?? 0);
+      const index = viewableItems[0].index ?? 0;
+      setActiveVideoIndex(index);
     }
   }).current;
 
@@ -36,7 +52,7 @@ export function FeedScreen() {
   const renderItem = ({ item: video, index }: { item: VideoMetadata; index: number }) => (
     <VideoPlayer
       video={video}
-      shouldPlay={index === activeVideoIndex}
+      shouldPlay={index === activeVideoIndex && isFocused}
       isMuted={false}
       onLike={() => handleLike(video)}
       onDoubleTap={() => handleLike(video)}
@@ -66,6 +82,7 @@ export function FeedScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <FlatList
+        ref={flatListRef}
         data={videos}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
@@ -75,6 +92,12 @@ export function FeedScreen() {
         viewabilityConfig={viewabilityConfig}
         onEndReached={fetchNextPage}
         onEndReachedThreshold={0.5}
+        getItemLayout={(_, index) => ({
+          length: flatListRef.current?.getScrollableNode().clientHeight || 0,
+          offset: (flatListRef.current?.getScrollableNode().clientHeight || 0) * index,
+          index,
+        })}
+        removeClippedSubviews={false}
       />
     </SafeAreaView>
   );

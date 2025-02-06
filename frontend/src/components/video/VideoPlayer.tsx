@@ -50,6 +50,12 @@ export function VideoPlayer({
         videoRef.current.pauseAsync().catch(console.error);
       }
     }
+
+    return () => {
+      if (videoRef.current) {
+        videoRef.current.unloadAsync().catch(console.error);
+      }
+    };
   }, [shouldPlay]);
 
   const handlePlaybackStatusUpdate = (status: AVPlaybackStatus) => {
@@ -110,7 +116,7 @@ export function VideoPlayer({
         isLooping
         isMuted={isMuted}
         onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
-        onError={handleError}
+        onError={handleError as (error: string) => void}
         useNativeControls={false}
         shouldPlay={shouldPlay}
         progressUpdateIntervalMillis={500}
