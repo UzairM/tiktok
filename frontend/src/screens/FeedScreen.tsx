@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { View, FlatList, StyleSheet, ActivityIndicator, Text, ViewToken, useWindowDimensions } from 'react-native';
+import { View, FlatList, StyleSheet, ActivityIndicator, Text, ViewToken, useWindowDimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useIsFocused } from '@react-navigation/native';
 import { VideoPlayer } from '../components/video/VideoPlayer';
@@ -21,11 +21,14 @@ export function FeedScreen() {
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
-  // Calculate height accounting for tab bar and bottom inset
-  const videoHeight = windowHeight - (49 + insets.bottom);
+  // Calculate height accounting for bottom tab bar (which is typically 49px) and any additional bottom insets
+  const TAB_BAR_HEIGHT = 49;
+  const BOTTOM_SPACE = Math.max(TAB_BAR_HEIGHT, insets.bottom + TAB_BAR_HEIGHT);
+  const videoHeight = windowHeight - BOTTOM_SPACE;
 
   const viewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 50,
+    itemVisiblePercentThreshold: 80,
+    minimumViewTime: 0,
     waitForInteraction: false,
   }).current;
 
@@ -35,6 +38,14 @@ export function FeedScreen() {
       setActiveVideoIndex(index);
     }
   }).current;
+
+  const handleMomentumScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offset = e.nativeEvent.contentOffset.y;
+    const index = Math.round(offset / videoHeight);
+    if (index !== activeVideoIndex) {
+      setActiveVideoIndex(index);
+    }
+  };
 
   const handleLike = async (video: VideoMetadata) => {
     try {
@@ -93,6 +104,14 @@ export function FeedScreen() {
           index,
         })}
         snapToInterval={videoHeight}
+        snapToAlignment="start"
+        decelerationRate={0.9}
+        onMomentumScrollEnd={handleMomentumScrollEnd}
+        disableIntervalMomentum={true}
+        maxToRenderPerBatch={3}
+        windowSize={3}
+        removeClippedSubviews={true}
+        scrollEventThrottle={16}
       />
     </SafeAreaView>
   );

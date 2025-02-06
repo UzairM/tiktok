@@ -5,6 +5,7 @@ import { useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LikeButton } from './LikeButton';
 import { VideoOverlay } from './VideoOverlay';
+import { formatNumber } from '../../utils/format';
 import type { VideoMetadata } from '../../types/video';
 
 interface VideoError {
@@ -32,12 +33,14 @@ export function VideoPlayer({
   const videoRef = useRef<Video>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { height: windowHeight } = useWindowDimensions();
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const lastTap = useRef<number>(0);
 
-  // Calculate height accounting for tab bar (which is typically 49px) and bottom inset
-  const videoHeight = windowHeight - (49 + insets.bottom);
+  // Calculate height and bottom position for like button
+  const TAB_BAR_HEIGHT = 49;
+  const BOTTOM_SPACE = Math.max(TAB_BAR_HEIGHT, insets.bottom + TAB_BAR_HEIGHT);
+  const videoHeight = windowHeight - BOTTOM_SPACE;
 
   useEffect(() => {
     if (videoRef.current) {
@@ -94,25 +97,27 @@ export function VideoPlayer({
       style={[styles.container, { height: videoHeight }]} 
       onPress={handlePress}
     >
-      <Video
-        ref={videoRef}
-        source={{ 
-          uri: video.url,
-          overrideFileExtensionAndroid: 'm3u8',
-          headers: {
-            'Accept': '*/*',
-          }
-        }}
-        style={StyleSheet.absoluteFill}
-        resizeMode={ResizeMode.COVER}
-        shouldPlay={shouldPlay}
-        isLooping
-        isMuted={isMuted}
-        onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
-        onError={handleError}
-        useNativeControls={false}
-        progressUpdateIntervalMillis={500}
-      />
+      <View style={styles.videoContainer}>
+        <Video
+          ref={videoRef}
+          source={{ 
+            uri: video.url,
+            overrideFileExtensionAndroid: 'm3u8',
+            headers: {
+              'Accept': '*/*',
+            }
+          }}
+          style={styles.video}
+          resizeMode={ResizeMode.CONTAIN}
+          shouldPlay={shouldPlay}
+          isLooping
+          isMuted={isMuted}
+          onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+          onError={handleError}
+          useNativeControls={false}
+          progressUpdateIntervalMillis={500}
+        />
+      </View>
       {isLoading && (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#fff" />
@@ -121,13 +126,14 @@ export function VideoPlayer({
       <VideoOverlay
         username={video.username}
         description={video.description}
-        likes={video.likes}
       />
-      <LikeButton
-        isLiked={video.isLiked}
-        onPress={onLike}
-        style={styles.likeButton}
-      />
+      <View style={[styles.likeButtonContainer, { bottom: 120 }]}>
+        <LikeButton
+          isLiked={video.isLiked}
+          onPress={onLike}
+        />
+        <Text style={styles.likeCount}>{formatNumber(video.likes)}</Text>
+      </View>
     </Pressable>
   );
 }
@@ -136,6 +142,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
+  },
+  videoContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000',
+  },
+  video: {
+    width: '100%',
+    height: '100%',
   },
   loadingContainer: {
     ...StyleSheet.absoluteFillObject,
@@ -152,9 +168,16 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
   },
-  likeButton: {
+  likeButtonContainer: {
     position: 'absolute',
     right: 16,
-    bottom: 100,
+    zIndex: 10,
+    alignItems: 'center',
+  },
+  likeCount: {
+    color: '#fff',
+    fontSize: 14,
+    marginTop: 4,
+    textAlign: 'center',
   },
 }); 

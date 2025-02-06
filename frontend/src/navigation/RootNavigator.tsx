@@ -2,6 +2,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { ActivityIndicator, View } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { RootStackParamList } from './types';
 import { FeedScreen } from '../screens/FeedScreen';
 import { UploadScreen } from '../screens/UploadScreen';
@@ -16,21 +17,47 @@ const Tab = createBottomTabNavigator<RootStackParamList>();
 
 function TabNavigator() {
   return (
-    <Tab.Navigator screenOptions={{ headerShown: false }}>
+    <Tab.Navigator 
+      screenOptions={{ 
+        headerShown: false,
+        tabBarActiveTintColor: '#ff2d55',
+        tabBarInactiveTintColor: '#666',
+        tabBarStyle: {
+          borderTopWidth: 0,
+          elevation: 0,
+          backgroundColor: '#000',
+        }
+      }}
+    >
       <Tab.Screen 
         name="Feed" 
         component={FeedScreen}
-        options={{ tabBarLabel: 'Home' }}
+        options={{ 
+          tabBarLabel: 'Home',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="home" size={size} color={color} />
+          )
+        }}
       />
       <Tab.Screen 
         name="Upload" 
         component={UploadScreen}
-        options={{ tabBarLabel: 'Upload' }}
+        options={{ 
+          tabBarLabel: 'Upload',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="plus-box" size={size} color={color} />
+          )
+        }}
       />
       <Tab.Screen 
         name="Profile" 
         component={ProfileScreen}
-        options={{ tabBarLabel: 'Profile' }}
+        options={{ 
+          tabBarLabel: 'Profile',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="account" size={size} color={color} />
+          )
+        }}
       />
     </Tab.Navigator>
   );

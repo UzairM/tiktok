@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-export const storageService = createStorageService('s3', {
+export const storageService = createStorageService({
   bucket: process.env.S3_BUCKET_NAME || 'tiktok-clone',
   region: process.env.AWS_REGION || 'us-east-1',
   accessKey: process.env.AWS_ACCESS_KEY_ID || '',

@@ -2,12 +2,11 @@ declare global {
   namespace NodeJS {
     interface ProcessEnv {
       PORT: string;
-      MINIO_ENDPOINT: string;
-      MINIO_PORT: string;
-      MINIO_ACCESS_KEY: string;
-      MINIO_SECRET_KEY: string;
-      MINIO_USE_SSL: string;
-      MINIO_BUCKET_NAME: string;
+      AWS_REGION: string;
+      AWS_ACCESS_KEY_ID: string;
+      AWS_SECRET_ACCESS_KEY: string;
+      S3_BUCKET_NAME: string;
+      CLOUDFRONT_DOMAIN: string;
     }
   }
 }
