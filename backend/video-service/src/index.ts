@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import './config/firebase';
 import authRoutes from './routes/auth';
 import { errorHandler } from './middleware/error';
+import videoRoutes from './routes/videos';
 
 dotenv.config();
 
@@ -15,6 +16,7 @@ app.use(express.json());
 
 // Routes
 app.use('/auth', authRoutes);
+app.use('/videos', videoRoutes);
 
 // Health check route
 app.get('/health', (_req, res) => {

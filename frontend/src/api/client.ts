@@ -8,7 +8,7 @@ const API_URL = EXPO_PUBLIC_API_URL;
 console.log('API URL:', API_URL); // Should show http://10.0.2.2:3000
 
 export const apiClient = axios.create({
-  baseURL: API_URL,
+  baseURL: 'http://10.0.2.2:3000',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -20,8 +20,12 @@ apiClient.interceptors.request.use(
     try {
       const token = await AsyncStorage.getItem('auth_token');
       if (token && config.headers) {
-        config.headers.Authorization = `Bearer ${token}`;
-        console.log('Token added to request:', token); // Debug log
+        // Log the full token for debugging
+        console.log('Full token being sent:', token);
+        
+        // Make sure we're sending a raw token without 'Bearer'
+        const cleanToken = token.replace('Bearer ', '');
+        config.headers.Authorization = `Bearer ${cleanToken}`;
       }
     } catch (error) {
       console.error('Error getting token:', error);

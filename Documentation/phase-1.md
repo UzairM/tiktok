@@ -9,30 +9,30 @@
 - [x] Configure MinIO (service accounts, environment variables)
 
 ### Frontend
-- [ ] Create new React Native (Expo) project
-- [ ] Configure API client for backend communication
-- [ ] Set up environment variables for API URL
+- [x] Create new React Native (Expo) project
+- [x] Configure API client for backend communication
+- [x] Set up environment variables for API URL
 
 ## User Authentication & Profile
 
 ### Backend
-- [ ] Implement sign-up API using Firebase Admin SDK
+- [x] Implement sign-up API using Firebase Admin SDK
   - Create user with minimal profile data
   - Secure with token-based or session-based auth
-- [ ] Implement login API
-- [ ] Setup basic security rules for Firestore (or Realtime DB) for user docs
+- [x] Implement login API
+- [x] Setup basic security rules for Firestore (or Realtime DB) for user docs
 
 ### Frontend
-- [ ] Add email-based signup flow
+- [x] Add email-based signup flow
   - Collect username, email, password
   - Validate input
   - Send payload to backend
-- [ ] Add login/logout flow
-- [ ] Display basic user profile screen
+- [x] Add login/logout flow
+- [x] Display basic user profile screen
   - Show username, profile image (optional placeholder)
-- [ ] Implement public/private account toggle (UI only, toggle not yet enforced in backend)
+- [x] Implement public/private account toggle (UI only, toggle not yet enforced in backend)
 
 ## Testing & Verification
-- [ ] Unit test backend sign-up and login endpoints
-- [ ] Test React Native Firebase sign-up and login on real or emulated devices
-- [ ] Confirm user data is stored securely in Firebase 
+- [x] Unit test backend sign-up and login endpoints
+- [x] Test React Native Firebase sign-up and login on real or emulated devices
+- [x] Confirm user data is stored securely in Firebase 

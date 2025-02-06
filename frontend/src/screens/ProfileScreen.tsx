@@ -40,8 +40,8 @@ export function ProfileScreen() {
         <View style={styles.content}>
           <Text style={commonStyles.subtitle}>No videos yet</Text>
         </View>
-        <AnimatedButton 
-          title="Logout" 
+        <AnimatedButton
+          title="Logout"
           onPress={handleLogout}
           variant="secondary"
           isLoading={isLoading}

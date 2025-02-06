@@ -4,45 +4,48 @@ import { auth } from '../config/firebase';
 export interface AuthRequest extends Request {
   user?: {
     uid: string;
-    email: string;
+    email?: string;
   };
 }
 
-export async function authMiddleware(
+export const authMiddleware = async (
   req: AuthRequest,
   res: Response,
   next: NextFunction
-): Promise<void> {
+) => {
   try {
-    const token = req.headers.authorization?.split('Bearer ')[1];
-
-    if (!token) {
-      res.status(401).json({
-        message: 'No token provided',
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+        res.status(401).json({
         code: 'auth/no-token',
+        message: 'No token provided'
       });
       return;
     }
 
+    const token = authHeader.split('Bearer ')[1];
+    console.log('Received token:', token); // Debug log
     try {
       const decodedToken = await auth.verifyIdToken(token);
       req.user = {
         uid: decodedToken.uid,
-        email: decodedToken.email || '',
+        email: decodedToken.email,
       };
       next();
-    } catch (error) {
-      // Token verification failed but we still want to allow logout
-      if (req.path === '/auth/logout') {
-        next();
-        return;
-      }
-      throw error;
+    } catch (verifyError) {
+      console.error('Token verification error:', verifyError);
+        res.status(401).json({
+        code: 'auth/invalid-token',
+        message: 'Invalid token'
+      });
+      return;
     }
   } catch (error) {
-    res.status(401).json({
-      message: 'Invalid token',
-      code: 'auth/invalid-token',
+    console.error('Auth middleware error:', error);
+      res.status(500).json({
+      code: 'auth/server-error',
+      message: 'Internal server error'
     });
+    return;
   }
-} 
+}; 

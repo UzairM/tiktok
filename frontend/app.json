@@ -33,7 +33,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos"
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos.",
+          "videosPermission": "Allow $(PRODUCT_NAME) to access your videos."
         }
       ]
     ]

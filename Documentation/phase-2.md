@@ -19,10 +19,11 @@
 ## Video Upload
 
 ### Backend
-- [ ] Expose a Firebase Storage bucket for uploads
-- [ ] Configure MinIO bucket for video uploads
+- [ ] Expose a MiniIO Storage bucket for uploads
+- [ ] Configure MiniIO bucket for video uploads
 - [ ] Implement file size and type restrictions in upload middleware
-- [ ] Store video metadata in Firestore and MinIO references:
+- [ ] Store video metadata in Firestore and MiniIO references:
+
   - userId reference
   - video URL (after successful upload)
   - timestamp

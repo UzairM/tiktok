@@ -1,21 +1,73 @@
-import { View, Text } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { AnimatedButton } from '../components/ui/AnimatedButton';
-import { commonStyles } from '../styles/common';
+import { useState, useEffect } from 'react';
+import { View, StyleSheet, Alert } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { AnimatedButton } from '../components/ui';
+import { uploadVideo } from '../api/videos';
+import { useNavigation } from '@react-navigation/native';
 
 export function UploadScreen() {
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const navigation = useNavigation();
+
+  useEffect(() => {
+    (async () => {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission needed',
+          'Please grant camera roll permissions to upload videos'
+        );
+      }
+    })();
+  }, []);
+
+  const handleSelectVideo = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+        allowsEditing: true,
+        quality: 1,
+        videoMaxDuration: 60,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setIsUploading(true);
+        const video = result.assets[0];
+        
+        await uploadVideo({
+          uri: video.uri,
+          type: 'video/mp4',
+          name: 'video.mp4',
+        }, (progress) => {
+          setUploadProgress(progress);
+        });
+
+        navigation.goBack();
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      setIsUploading(false);
+      Alert.alert('Error', 'Failed to upload video');
+    }
+  };
+
   return (
-    <SafeAreaView style={commonStyles.fullScreen}>
-      <View style={commonStyles.centerContent}>
-        <Text style={commonStyles.title}>Upload Video</Text>
-        <Text style={commonStyles.subtitle}>Record or select a video to upload</Text>
-        <AnimatedButton title="Record Video" onPress={() => console.log('Record video')} />
-        <AnimatedButton
-          title="Select from Gallery"
-          onPress={() => console.log('Select video')}
-          variant="secondary"
-        />
-      </View>
-    </SafeAreaView>
+    <View style={styles.container}>
+      <AnimatedButton
+        title={isUploading ? `Uploading ${uploadProgress}%` : "Select Video"}
+        onPress={handleSelectVideo}
+        disabled={isUploading}
+        isLoading={isUploading}
+      />
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 16,
+  },
+});
