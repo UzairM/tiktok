@@ -6,6 +6,7 @@ export type RootStackParamList = {
   Feed: undefined;
   Upload: undefined;
   Profile: undefined;
+  VideoDetail: { videoId: string };
   // Add other screen params as needed
 };
 

@@ -36,7 +36,8 @@
           "photosPermission": "Allow $(PRODUCT_NAME) to access your photos.",
           "videosPermission": "Allow $(PRODUCT_NAME) to access your videos."
         }
-      ]
+      ],
+      "expo-video"
     ]
   }
 }

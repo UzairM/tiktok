@@ -20,6 +20,7 @@ services:
     volumes:
       - ./video-service:/usr/src/app
       - /usr/src/app/node_modules
+      - ./video-service/src/config/serviceAccount.json:/usr/src/app/src/config/serviceAccount.json:ro
     command: npm run dev
 
   minio:
@@ -30,9 +31,21 @@ services:
     environment:
       - MINIO_ROOT_USER=minioadmin
       - MINIO_ROOT_PASSWORD=minioadmin
+      - MINIO_BROWSER_REDIRECT_URL=http://10.10.2.2:9001
+      - MINIO_SITE_NAME=minio
+      - MINIO_SITE_REGION=us-east-1
+      - MINIO_DOMAIN=10.10.2.2
+      - MINIO_BROWSER=on
+      - MINIO_SERVER_URL=http://10.10.2.2:9000
+      - MINIO_CORS_ALLOW_ORIGINS=*
+      - MINIO_API_CORS_ALLOW_ORIGIN=*
+      - MINIO_CORS_ALLOW_METHODS=GET,PUT,POST,DELETE,OPTIONS
+      - MINIO_CORS_ALLOW_HEADERS=Accept,Authorization,Content-Type,Content-Length,X-Amz-Date,X-Amz-Content-Sha256,X-Amz-User-Agent,X-Amz-Security-Token
+      - MINIO_CORS_EXPOSE_HEADERS=ETag
+      - MINIO_CORS_ALLOW_CREDENTIALS=true
     volumes:
       - minio_data:/data
-    command: server --console-address ":9001" /data
+    command: server --console-address ":9001" --address ":9000" /data
 
 volumes:
   minio_data: 

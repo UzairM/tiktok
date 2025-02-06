@@ -4,7 +4,39 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Input } from '../components/ui/Input';
 import { AnimatedButton } from '../components/ui/AnimatedButton';
 import { useAuth } from '../hooks/useAuth';
-import { validateAuth, ValidationError } from '../utils/validation';
+
+interface ValidationError {
+  email?: string;
+  password?: string;
+  username?: string;
+}
+
+function validateAuth({ email, password, username, isLogin }: { 
+  email: string; 
+  password: string; 
+  username: string; 
+  isLogin: boolean; 
+}): ValidationError {
+  const errors: ValidationError = {};
+
+  if (!email) {
+    errors.email = 'Email is required';
+  } else if (!/\S+@\S+\.\S+/.test(email)) {
+    errors.email = 'Email is invalid';
+  }
+
+  if (!password) {
+    errors.password = 'Password is required';
+  } else if (password.length < 6) {
+    errors.password = 'Password must be at least 6 characters';
+  }
+
+  if (!isLogin && !username) {
+    errors.username = 'Username is required';
+  }
+
+  return errors;
+}
 
 export function AuthScreen() {
   const [isLogin, setIsLogin] = useState(true);
@@ -42,6 +74,7 @@ export function AuthScreen() {
   const handleToggleMode = () => {
     setIsLogin(!isLogin);
     setErrors({});
+    setApiError(null);
   };
 
   return (

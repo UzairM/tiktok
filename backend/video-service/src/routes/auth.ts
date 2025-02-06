@@ -1,12 +1,27 @@
 import { Router, Request, Response } from 'express';
 import { auth, db } from '../config/firebase';
-import { validateBody } from '../middleware/validate';
-import { loginSchema, signupSchema } from '../schemas/auth';
+import { validate } from '../middleware/validate';
+import { z } from 'zod';
 import type { FirebaseError } from 'firebase-admin/app';
 
 const router = Router();
 
-router.post('/signup', validateBody(signupSchema), async (req: Request, res: Response): Promise<void> => {
+const loginSchema = z.object({
+  body: z.object({
+    email: z.string().email(),
+    password: z.string().min(6),
+  }),
+});
+
+const signupSchema = z.object({
+  body: z.object({
+    email: z.string().email(),
+    password: z.string().min(6),
+    username: z.string().min(3),
+  }),
+});
+
+router.post('/signup', validate(signupSchema), async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password, username } = req.body;
 
@@ -65,7 +80,7 @@ router.post('/signup', validateBody(signupSchema), async (req: Request, res: Res
   }
 });
 
-router.post('/login', validateBody(loginSchema), async (req: Request, res: Response): Promise<void> => {
+router.post('/login', validate(loginSchema), async (req: Request, res: Response): Promise<void> => {
   try {
     const { email } = req.body;
     

@@ -27,10 +27,9 @@ export function UploadScreen() {
   const handleSelectVideo = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+        mediaTypes: 'videos',
         allowsEditing: true,
         quality: 1,
-        videoMaxDuration: 60,
       });
 
       if (!result.canceled && result.assets[0]) {

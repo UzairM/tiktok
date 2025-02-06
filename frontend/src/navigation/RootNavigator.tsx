@@ -7,7 +7,8 @@ import { FeedScreen } from '../screens/FeedScreen';
 import { UploadScreen } from '../screens/UploadScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { AuthScreen } from '../screens/AuthScreen';
-import { useAuthContext } from '../contexts/AuthContext';
+import { VideoDetailScreen } from '../screens/VideoDetail';
+import { useAuth } from '../contexts/AuthContext';
 import { commonStyles } from '../styles/common';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -36,11 +37,11 @@ function TabNavigator() {
 }
 
 export function RootNavigator() {
-  const { isAuthenticated, isLoading } = useAuthContext();
+  const { user, isLoading } = useAuth();
 
   if (isLoading) {
     return (
-      <View style={commonStyles.centerContent}>
+      <View style={commonStyles.fullScreen}>
         <ActivityIndicator size="large" />
       </View>
     );
@@ -49,10 +50,21 @@ export function RootNavigator() {
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {!isAuthenticated ? (
+        {!user ? (
           <Stack.Screen name="Auth" component={AuthScreen} />
         ) : (
-          <Stack.Screen name="Main" component={TabNavigator} />
+          <>
+            <Stack.Screen name="Main" component={TabNavigator} />
+            <Stack.Screen 
+              name="VideoDetail" 
+              component={VideoDetailScreen}
+              options={{
+                headerShown: true,
+                presentation: 'modal',
+                title: 'Video',
+              }}
+            />
+          </>
         )}
       </Stack.Navigator>
     </NavigationContainer>

@@ -13,7 +13,7 @@ export interface StorageService {
     key: string
   ): Promise<{ url: string }>;
   
-  getSignedUrl(key: string): Promise<string>;
+  downloadFile(key: string): Promise<Buffer>;
   
   deleteFile(key: string): Promise<void>;
   

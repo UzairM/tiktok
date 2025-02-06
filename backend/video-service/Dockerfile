@@ -1,5 +1,8 @@
 FROM node:18-alpine
 
+# Install FFmpeg and other dependencies
+RUN apk add --no-cache ffmpeg
+
 WORKDIR /usr/src/app
 
 # Copy package files
