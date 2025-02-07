@@ -94,11 +94,20 @@ router.get('/feed', authMiddleware, async (req: AuthRequest, res: Response) => {
     }
 
     const snapshot = await query.get();
-    const videos = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    const videosPromises = snapshot.docs.map(async doc => {
+      const videoData = doc.data();
+      // Get user data for each video
+      const userDoc = await db.collection('users').doc(videoData.userId).get();
+      const userData = userDoc.data();
+      
+      return {
+        id: doc.id,
+        ...videoData,
+        username: userData?.username || 'Unknown User'
+      };
+    });
 
+    const videos = await Promise.all(videosPromises);
     const lastDoc = snapshot.docs[snapshot.docs.length - 1];
     
     res.json({
