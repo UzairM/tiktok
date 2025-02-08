@@ -1,8 +1,9 @@
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { apiClient } from './client';
 import type { LoginPayload, SignupPayload } from '../types/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export const authApi = {
   login: async (payload: LoginPayload) => {
@@ -64,5 +65,43 @@ export const authApi = {
       return token;
     }
     throw new Error('No user logged in');
+  },
+
+  updateProfileImage: async (imageUri: string) => {
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('No user logged in');
+
+      console.log('Starting profile image update for user:', user.uid);
+      console.log('Image URI:', imageUri);
+
+      // Convert image URI to blob
+      const response = await fetch(imageUri);
+      const blob = await response.blob();
+      console.log('Image converted to blob, size:', blob.size);
+
+      // Upload to Firebase Storage
+      const storage = getStorage();
+      const imageRef = ref(storage, `profile-images/${user.uid}`);
+      console.log('Uploading to Firebase Storage:', imageRef.fullPath);
+      
+      await uploadBytes(imageRef, blob);
+      console.log('Upload complete, getting download URL');
+
+      // Get download URL
+      const downloadURL = await getDownloadURL(imageRef);
+      console.log('Download URL:', downloadURL);
+
+      // Update user profile
+      await updateProfile(user, {
+        photoURL: downloadURL,
+      });
+      console.log('User profile updated with new photo URL');
+
+      return downloadURL;
+    } catch (error) {
+      console.error('Profile image update error:', error);
+      throw error;
+    }
   }
 };

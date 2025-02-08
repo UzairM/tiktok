@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LikeButton } from './LikeButton';
 import { VideoOverlay } from './VideoOverlay';
 import { formatNumber } from '../../utils/format';
+import { ProfileImage } from '../ui/ProfileImage';
 import type { VideoMetadata } from '../../types/video';
 
 interface VideoError {
@@ -128,6 +129,12 @@ export function VideoPlayer({
         description={video.description}
       />
       <View style={[styles.likeButtonContainer, { bottom: 120 }]}>
+        <ProfileImage
+          size={40}
+          userId={video.userId}
+          imageUrl={null}
+          style={styles.profileImage}
+        />
         <LikeButton
           isLiked={video.isLiked}
           onPress={onLike}
@@ -167,6 +174,11 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#fff',
     fontSize: 16,
+  },
+  profileImage: {
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: '#fff',
   },
   likeButtonContainer: {
     position: 'absolute',

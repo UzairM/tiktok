@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ActivityIndicator, FlatList, Image, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, FlatList, Image, Pressable, Alert, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { useUserVideos } from '../hooks/useUserVideos';
@@ -8,6 +8,11 @@ import { formatNumber } from '../utils/format';
 import type { VideoMetadata } from '../types/video';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
+import { auth } from '../config/firebase';
+import { ProfileImage } from '../components/ui/ProfileImage';
+import { AnimatedButton } from '../components/ui/AnimatedButton';
+import { authApi } from '../api/auth';
+import { useEffect } from 'react';
 
 function getAvatarUrl(username: string) {
   return `https://api.dicebear.com/7.x/avataaars/png?seed=${username}&backgroundColor=random`;
@@ -17,6 +22,34 @@ export function ProfileScreen() {
   const { user } = useAuth();
   const { videos, isLoading } = useUserVideos(user?.uid);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+  useEffect(() => {
+    console.log('Current user:', {
+      uid: user?.uid,
+      photoURL: user?.photoURL,
+      displayName: user?.displayName,
+      email: user?.email
+    });
+  }, [user]);
+
+  const handleImageSelected = async (uri: string) => {
+    try {
+      console.log('Selected image URI:', uri);
+      await authApi.updateProfileImage(uri);
+      console.log('Profile image updated successfully');
+    } catch (error) {
+      console.error('Profile image update error:', error);
+      Alert.alert('Error', 'Failed to update profile image');
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await authApi.logout();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to logout');
+    }
+  };
 
   const renderVideoItem = ({ item: video }: { item: VideoMetadata }) => (
     <Pressable
@@ -45,16 +78,31 @@ export function ProfileScreen() {
     );
   }
 
+  if (!user) return null;
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.profileInfo}>
-          <Image
-            source={{ uri: user?.photoURL || getAvatarUrl(user?.displayName || user?.email || 'user') }}
-            style={styles.avatar}
-          />
-          <Text style={styles.username}>@{user?.displayName || 'User'}</Text>
-        </View>
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={handleLogout}
+        >
+          <MaterialCommunityIcons name="logout" size={24} color="#666" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.content}>
+        <ProfileImage
+          size={120}
+          imageUrl={user.photoURL}
+          userId={user.uid}
+          onImageSelected={handleImageSelected}
+          editable
+        />
+        <Text style={[styles.username, { marginTop: 12 }]}>@{user?.displayName || 'User'}</Text>
+      </View>
+
+      <View style={styles.profileInfo}>
         <View style={styles.stats}>
           <StatItem label="Videos" value={videos.length.toString()} />
           <StatItem label="Followers" value="0" />
@@ -99,19 +147,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    padding: 16,
+  },
+  logoutButton: {
+    padding: 8,
+  },
+  content: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  profileInfo: {
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
-  },
-  profileInfo: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginBottom: 8,
   },
   username: {
     fontSize: 16,
