@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { View, StyleSheet, Text } from 'react-native';
+import { useState, useRef } from 'react';
+import { View, StyleSheet, Text, Image, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Input } from '../components/ui/Input';
 import { AnimatedButton } from '../components/ui/AnimatedButton';
@@ -46,6 +46,10 @@ export function AuthScreen() {
   const [errors, setErrors] = useState<ValidationError>({});
   const [apiError, setApiError] = useState<string | null>(null);
 
+  const emailInputRef = useRef<TextInput>(null);
+  const passwordInputRef = useRef<TextInput>(null);
+  const usernameInputRef = useRef<TextInput>(null);
+
   const { login, signup } = useAuth();
   const isLoading = login.isPending || signup.isPending;
 
@@ -79,10 +83,18 @@ export function AuthScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <View style={styles.logoContainer}>
+        <Image
+          source={require('../../assets/logo.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+      </View>
       <View style={styles.form}>
         {apiError && <Text style={styles.errorMessage}>{apiError}</Text>}
         {!isLogin && (
           <Input
+            ref={usernameInputRef}
             label="Username"
             value={username}
             onChangeText={(text) => {
@@ -91,9 +103,13 @@ export function AuthScreen() {
             }}
             placeholder="Enter username"
             error={errors.username}
+            returnKeyType="next"
+            onSubmitEditing={() => emailInputRef.current?.focus()}
+            blurOnSubmit={false}
           />
         )}
         <Input
+          ref={emailInputRef}
           label="Email"
           value={email}
           onChangeText={(text) => {
@@ -102,8 +118,14 @@ export function AuthScreen() {
           }}
           placeholder="Enter email"
           error={errors.email}
+          returnKeyType="next"
+          onSubmitEditing={() => passwordInputRef.current?.focus()}
+          blurOnSubmit={false}
+          keyboardType="email-address"
+          autoCapitalize="none"
         />
         <Input
+          ref={passwordInputRef}
           label="Password"
           value={password}
           onChangeText={(text) => {
@@ -113,6 +135,8 @@ export function AuthScreen() {
           placeholder="Enter password"
           secureTextEntry
           error={errors.password}
+          returnKeyType="go"
+          onSubmitEditing={handleSubmit}
         />
         <AnimatedButton
           title={isLogin ? 'Login' : 'Sign Up'}
@@ -136,7 +160,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'white',
   },
+  logoContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  logo: {
+    width: '80%',
+    height: '80%',
+    maxHeight: 200,
+  },
   form: {
+    flex: 2,
     padding: 20,
   },
   loader: {

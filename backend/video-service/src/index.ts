@@ -3,8 +3,10 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import './config/firebase';
 import authRoutes from './routes/auth';
-import { errorHandler } from './middleware/error';
 import videoRoutes from './routes/videos';
+import plantRoutes from './routes/plant.routes';
+import mediaRoutes from './routes/media.routes';
+import { errorHandler } from './middleware/error';
 
 dotenv.config();
 
@@ -17,6 +19,8 @@ app.use(express.json());
 // Routes
 app.use('/auth', authRoutes);
 app.use('/videos', videoRoutes);
+app.use('/plants', plantRoutes);
+app.use('/media', mediaRoutes);
 
 // Health check route
 app.get('/health', (_req, res) => {

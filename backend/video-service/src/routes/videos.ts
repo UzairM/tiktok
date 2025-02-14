@@ -1,8 +1,8 @@
-import { Router, Response } from 'express';
+import { Router, Response, Request } from 'express';
 import { randomBytes } from 'crypto';
 import { uploadMiddleware } from '../middleware/upload';
 import { storageService } from '../config/storage';
-import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { validateAuth } from '../middleware/auth';
 import { db } from '../config/firebase';
 import { FieldValue } from 'firebase-admin/firestore';
 import { NextFunction } from 'express';
@@ -22,7 +22,7 @@ setInterval(() => {
   });
 }, 5000); // Check for new videos every 5 seconds
 
-router.post('/upload', authMiddleware, (req: AuthRequest, res: Response) => {
+router.post('/upload', validateAuth, (req: Request, res: Response) => {
   uploadMiddleware(req, res, ((err: unknown) => {
     (async () => {
       try {
@@ -43,14 +43,14 @@ router.post('/upload', authMiddleware, (req: AuthRequest, res: Response) => {
         }
 
         const fileId = generateId();
-        const originalKey = `uploads/${req.user!.uid}/${fileId}/original.mp4`;
+        const originalKey = `uploads/${req.user!.id}/${fileId}/original.mp4`;
 
         // Upload original file to storage
         await storageService.uploadFile(req.file, originalKey);
 
         // Save initial metadata to Firestore
         await db.collection('videos').doc(fileId).set({
-          userId: req.user!.uid,
+          userId: req.user!.id,
           originalKey,
           title: req.body.title || 'Untitled',
           description: req.body.description || '',
@@ -76,7 +76,7 @@ router.post('/upload', authMiddleware, (req: AuthRequest, res: Response) => {
 });
 
 // Get video feed
-router.get('/feed', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.get('/feed', validateAuth, async (req: Request, res: Response) => {
   try {
     const { cursor } = req.query;
     const pageSize = 10;
@@ -124,10 +124,10 @@ router.get('/feed', authMiddleware, async (req: AuthRequest, res: Response) => {
 });
 
 // Toggle like on a video
-router.post('/:videoId/like', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.post('/:videoId/like', validateAuth, async (req: Request, res: Response) => {
   try {
     const { videoId } = req.params;
-    const userId = req.user!.uid;
+    const userId = req.user!.id;
 
     const userLikesRef = db.collection('users').doc(userId).collection('likes').doc(videoId);
     const videoRef = db.collection('videos').doc(videoId);
@@ -158,7 +158,7 @@ router.post('/:videoId/like', authMiddleware, async (req: AuthRequest, res: Resp
 });
 
 // Get user's videos
-router.get('/user/:userId', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.get('/user/:userId', validateAuth, async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
     
@@ -184,7 +184,7 @@ router.get('/user/:userId', authMiddleware, async (req: AuthRequest, res: Respon
 });
 
 // Get a single video by ID
-router.get('/:videoId', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.get('/:videoId', validateAuth, async (req: Request, res: Response) => {
   try {
     const { videoId } = req.params;
     
@@ -200,7 +200,7 @@ router.get('/:videoId', authMiddleware, async (req: AuthRequest, res: Response) 
 
     // Get the user's like status for this video
     const userLikeDoc = req.user ? 
-      await db.collection('users').doc(req.user.uid).collection('likes').doc(videoId).get() :
+      await db.collection('users').doc(req.user.id).collection('likes').doc(videoId).get() :
       null;
 
     const video = {

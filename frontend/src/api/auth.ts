@@ -1,6 +1,6 @@
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
 import { auth } from '../config/firebase';
-import { apiClient } from './client';
+import { api } from './client';
 import type { LoginPayload, SignupPayload } from '../types/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -18,7 +18,7 @@ export const authApi = {
       await AsyncStorage.setItem('auth_token', token);
       
       // Set token for API calls
-      apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       
       return {
         token,
@@ -39,7 +39,7 @@ export const authApi = {
     const token = await userCredential.user.getIdToken();
     
     // Set token for API calls
-    apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     
     return {
       token,
@@ -54,14 +54,14 @@ export const authApi = {
   logout: async () => {
     await signOut(auth);
     // Clear token from API client
-    delete apiClient.defaults.headers.common['Authorization'];
+    delete api.defaults.headers.common['Authorization'];
   },
 
   refreshToken: async () => {
     const user = auth.currentUser;
     if (user) {
       const token = await user.getIdToken(true); // Force refresh
-      apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       return token;
     }
     throw new Error('No user logged in');

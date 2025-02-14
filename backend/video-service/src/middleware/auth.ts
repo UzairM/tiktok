@@ -1,51 +1,41 @@
 import { Request, Response, NextFunction } from 'express';
 import { auth } from '../config/firebase';
 
-export interface AuthRequest extends Request {
-  user?: {
-    uid: string;
-    email?: string;
-  };
+/* eslint-disable @typescript-eslint/prefer-namespace-keyword, @typescript-eslint/no-namespace */
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: string;
+        email?: string;
+      };
+    }
+  }
 }
 
-export const authMiddleware = async (
-  req: AuthRequest,
+export async function validateAuth(
+  req: Request,
   res: Response,
   next: NextFunction
-) => {
+) {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
-        res.status(401).json({
-        code: 'auth/no-token',
-        message: 'No token provided'
-      });
-      return;
+       res.status(401).json({ message: 'Unauthorized' });
+       return
     }
 
     const token = authHeader.split('Bearer ')[1];
-    console.log('Received token:', token); // Debug log
-    try {
-      const decodedToken = await auth.verifyIdToken(token);
-      req.user = {
-        uid: decodedToken.uid,
-        email: decodedToken.email,
-      };
-      next();
-    } catch (verifyError) {
-      console.error('Token verification error:', verifyError);
-        res.status(401).json({
-        code: 'auth/invalid-token',
-        message: 'Invalid token'
-      });
-      return;
-    }
+    const decodedToken = await auth.verifyIdToken(token);
+
+    req.user = {
+      id: decodedToken.uid,
+      email: decodedToken.email,
+    };
+
+    next();
   } catch (error) {
-    console.error('Auth middleware error:', error);
-      res.status(500).json({
-      code: 'auth/server-error',
-      message: 'Internal server error'
-    });
-    return;
+    console.error('Auth error:', error);
+    res.status(401).json({ message: 'Unauthorized' });
   }
-}; 
+} 

@@ -1,18 +1,24 @@
-import { View, Text, StyleSheet, ActivityIndicator, FlatList, Image, Pressable, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, FlatList, Image, Pressable, Alert, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { useUserVideos } from '../hooks/useUserVideos';
+import { useUserMedia } from '../hooks/useUserMedia';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { formatNumber } from '../utils/format';
 import type { VideoMetadata } from '../types/video';
+import type { Media } from '../hooks/useUserMedia';
+import type { Plant } from '../types/plant';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { auth } from '../config/firebase';
 import { ProfileImage } from '../components/ui/ProfileImage';
 import { AnimatedButton } from '../components/ui/AnimatedButton';
 import { authApi } from '../api/auth';
-import { useEffect } from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import { Video, ResizeMode } from 'expo-av';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../api/client';
 
 function getAvatarUrl(username: string) {
   return `https://api.dicebear.com/7.x/avataaars/png?seed=${username}&backgroundColor=random`;
@@ -20,8 +26,27 @@ function getAvatarUrl(username: string) {
 
 export function ProfileScreen() {
   const { user } = useAuth();
-  const { videos, isLoading } = useUserVideos(user?.uid);
+  const { videos, isLoading: videosLoading } = useUserVideos(user?.uid);
+  const { media, isLoading: mediaLoading } = useUserMedia(user?.uid);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const [selectedTab, setSelectedTab] = useState<'videos' | 'plants'>('plants');
+
+  // Fetch plants
+  const { data: plants, isLoading: plantsLoading } = useQuery<Plant[]>({
+    queryKey: ['plants'],
+    queryFn: () => api.get('/plants').then(res => res.data)
+  });
+
+  // Group media by plant
+  const mediaByPlant = useMemo(() => {
+    if (!media || !plants) return new Map<string, Media[]>();
+    
+    const grouped = new Map<string, Media[]>();
+    plants.forEach(plant => {
+      grouped.set(plant.id, media.filter(m => m.plantId === plant.id));
+    });
+    return grouped;
+  }, [media, plants]);
 
   useEffect(() => {
     console.log('Current user:', {
@@ -68,7 +93,66 @@ export function ProfileScreen() {
     </Pressable>
   );
 
-  if (isLoading) {
+  const renderMediaItem = ({ item }: { item: Media }) => {
+    const isVideo = item.mediaUrl.endsWith('.mp4');
+    
+    return (
+      <Pressable
+        style={styles.mediaItem}
+        onPress={() => {
+          // TODO: Navigate to media detail screen
+          console.log('Media pressed:', item);
+        }}
+      >
+        {isVideo ? (
+          <Video
+            source={{ uri: item.mediaUrl }}
+            style={styles.mediaThumbnail}
+            resizeMode={ResizeMode.COVER}
+            shouldPlay={false}
+            isMuted={true}
+            useNativeControls={false}
+          />
+        ) : (
+          <Image
+            source={{ uri: item.mediaUrl }}
+            style={styles.mediaThumbnail}
+            resizeMode="cover"
+          />
+        )}
+      </Pressable>
+    );
+  };
+
+  const renderPlantSection = (plant: Plant) => {
+    const plantMedia = mediaByPlant.get(plant.id) || [];
+    
+    return (
+      <View key={plant.id} style={styles.plantSection}>
+        <View style={styles.plantHeader}>
+          <Text style={styles.plantName}>{plant.name}</Text>
+          <Text style={styles.plantType}>{plant.type}</Text>
+        </View>
+        
+        {plantMedia.length > 0 ? (
+          <FlatList
+            horizontal
+            data={plantMedia}
+            renderItem={renderMediaItem}
+            keyExtractor={item => item.id}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.mediaList}
+          />
+        ) : (
+          <View style={styles.emptyPlantMedia}>
+            <Text style={styles.emptyText}>No media yet for this plant</Text>
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  if (videosLoading || mediaLoading || plantsLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
@@ -105,24 +189,50 @@ export function ProfileScreen() {
       <View style={styles.profileInfo}>
         <View style={styles.stats}>
           <StatItem label="Videos" value={videos.length.toString()} />
-          <StatItem label="Followers" value="0" />
-          <StatItem label="Following" value="0" />
+          <StatItem label="Plants" value={(plants?.length || 0).toString()} />
+          <StatItem label="Media" value={media.length.toString()} />
         </View>
       </View>
 
-      <FlatList
-        data={videos}
-        renderItem={renderVideoItem}
-        keyExtractor={(item) => item.id}
-        numColumns={3}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.videoGrid}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No videos yet</Text>
-          </View>
-        }
-      />
+      <View style={styles.tabs}>
+        <TouchableOpacity
+          style={[styles.tab, selectedTab === 'videos' && styles.selectedTab]}
+          onPress={() => setSelectedTab('videos')}
+        >
+          <Text style={[styles.tabText, selectedTab === 'videos' && styles.selectedTabText]}>Videos</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, selectedTab === 'plants' && styles.selectedTab]}
+          onPress={() => setSelectedTab('plants')}
+        >
+          <Text style={[styles.tabText, selectedTab === 'plants' && styles.selectedTabText]}>Plants</Text>
+        </TouchableOpacity>
+      </View>
+
+      {selectedTab === 'videos' ? (
+        <FlatList
+          data={videos}
+          renderItem={renderVideoItem}
+          keyExtractor={(item) => item.id}
+          numColumns={3}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.videoGrid}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>No videos yet</Text>
+            </View>
+          }
+        />
+      ) : (
+        <ScrollView style={styles.plantsContainer}>
+          {plants?.map(renderPlantSection)}
+          {(!plants || plants.length === 0) && (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>No plants yet</Text>
+            </View>
+          )}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -218,4 +328,68 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
+  tabs: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  selectedTab: {
+    borderBottomWidth: 2,
+    borderBottomColor: '#000',
+  },
+  tabText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  selectedTabText: {
+    color: '#000',
+    fontWeight: 'bold',
+  },
+  plantsContainer: {
+    flex: 1,
+  },
+  plantSection: {
+    marginBottom: 24,
+  },
+  plantHeader: {
+    padding: 16,
+    backgroundColor: '#f8f9fa',
+  },
+  plantName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  plantType: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+  },
+  mediaList: {
+    padding: 8,
+  },
+  mediaItem: {
+    width: 160,
+    height: 160,
+    marginHorizontal: 8,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  mediaThumbnail: {
+    width: '100%',
+    height: '100%',
+  },
+  emptyPlantMedia: {
+    height: 160,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    margin: 8,
+    borderRadius: 8,
+  },
 });
+
