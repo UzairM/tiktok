@@ -1,35 +1,26 @@
-import { View, Text, StyleSheet, ActivityIndicator, FlatList, Image, Pressable, Alert, TouchableOpacity, ScrollView } from 'react-native';
+import React, { View, Text, StyleSheet, ActivityIndicator, FlatList, Image, Pressable, Alert, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
-import { useUserVideos } from '../hooks/useUserVideos';
 import { useUserMedia } from '../hooks/useUserMedia';
 import { useNavigation } from '@react-navigation/native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { formatNumber } from '../utils/format';
-import type { VideoMetadata } from '../types/video';
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import type { Media } from '../hooks/useUserMedia';
 import type { Plant } from '../types/plant';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { auth } from '../config/firebase';
 import { ProfileImage } from '../components/ui/ProfileImage';
-import { AnimatedButton } from '../components/ui/AnimatedButton';
 import { authApi } from '../api/auth';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Video, ResizeMode } from 'expo-av';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
-
-function getAvatarUrl(username: string) {
-  return `https://api.dicebear.com/7.x/avataaars/png?seed=${username}&backgroundColor=random`;
-}
+import { MediaDetailsModal } from '../components/MediaDetailsModal';
 
 export function ProfileScreen() {
   const { user } = useAuth();
-  const { videos, isLoading: videosLoading } = useUserVideos(user?.uid);
   const { media, isLoading: mediaLoading } = useUserMedia(user?.uid);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const [selectedTab, setSelectedTab] = useState<'videos' | 'plants'>('plants');
 
   // Fetch plants
   const { data: plants, isLoading: plantsLoading } = useQuery<Plant[]>({
@@ -43,30 +34,10 @@ export function ProfileScreen() {
     
     const grouped = new Map<string, Media[]>();
     plants.forEach(plant => {
-      grouped.set(plant.id, media.filter(m => m.plantId === plant.id));
+      grouped.set(plant.id, media.filter((m: Media) => m.plantId === plant.id));
     });
     return grouped;
   }, [media, plants]);
-
-  useEffect(() => {
-    console.log('Current user:', {
-      uid: user?.uid,
-      photoURL: user?.photoURL,
-      displayName: user?.displayName,
-      email: user?.email
-    });
-  }, [user]);
-
-  const handleImageSelected = async (uri: string) => {
-    try {
-      console.log('Selected image URI:', uri);
-      await authApi.updateProfileImage(uri);
-      console.log('Profile image updated successfully');
-    } catch (error) {
-      console.error('Profile image update error:', error);
-      Alert.alert('Error', 'Failed to update profile image');
-    }
-  };
 
   const handleLogout = async () => {
     try {
@@ -76,35 +47,29 @@ export function ProfileScreen() {
     }
   };
 
-  const renderVideoItem = ({ item: video }: { item: VideoMetadata }) => (
-    <Pressable
-      style={styles.videoItem}
-      onPress={() => navigation.navigate('VideoDetail', { videoId: video.id })}
-    >
-      <Image
-        source={{ uri: video.thumbnailUrl }}
-        style={styles.thumbnail}
-        resizeMode="cover"
-      />
-      <View style={styles.videoStats}>
-        <MaterialCommunityIcons name="play" size={16} color="#fff" />
-        <Text style={styles.statsText}>{formatNumber(video.views)}</Text>
-      </View>
-    </Pressable>
-  );
-
   const renderMediaItem = ({ item }: { item: Media }) => {
-    const isVideo = item.mediaUrl.endsWith('.mp4');
+    const getMediaType = (url: string): 'image' | 'video' => {
+      const extension = url.split('.').pop()?.toLowerCase();
+      return extension === 'mp4' ? 'video' : 'image';
+    };
+
+    const mediaType = item.type || getMediaType(item.mediaUrl);
+    console.log('Rendering media item:', { id: item.id, type: mediaType, url: item.mediaUrl });
     
     return (
       <Pressable
         style={styles.mediaItem}
         onPress={() => {
-          // TODO: Navigate to media detail screen
-          console.log('Media pressed:', item);
+          console.log('Media item pressed:', { id: item.id, type: mediaType });
+          navigation.navigate('MediaDetails', {
+            media: {
+              ...item,
+              type: mediaType
+            }
+          });
         }}
       >
-        {isVideo ? (
+        {mediaType === 'video' ? (
           <Video
             source={{ uri: item.mediaUrl }}
             style={styles.mediaThumbnail}
@@ -112,12 +77,18 @@ export function ProfileScreen() {
             shouldPlay={false}
             isMuted={true}
             useNativeControls={false}
+            onError={(error) => {
+              console.error('Thumbnail video error:', error);
+            }}
           />
         ) : (
           <Image
             source={{ uri: item.mediaUrl }}
             style={styles.mediaThumbnail}
             resizeMode="cover"
+            onError={(error) => {
+              console.error('Thumbnail image error:', error.nativeEvent.error);
+            }}
           />
         )}
       </Pressable>
@@ -130,8 +101,20 @@ export function ProfileScreen() {
     return (
       <View key={plant.id} style={styles.plantSection}>
         <View style={styles.plantHeader}>
-          <Text style={styles.plantName}>{plant.name}</Text>
-          <Text style={styles.plantType}>{plant.type}</Text>
+          <View style={styles.plantInfo}>
+            <Text style={styles.plantName}>{plant.name}</Text>
+            <Text style={styles.plantType}>{plant.type}</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.growthButton}
+            onPress={() => navigation.navigate('GrowthAnalysis', {
+              plantId: plant.id,
+              plantName: plant.name,
+            })}
+          >
+            <Ionicons name="analytics" size={20} color="#fff" />
+            <Text style={styles.growthButtonText}>Growth</Text>
+          </TouchableOpacity>
         </View>
         
         {plantMedia.length > 0 ? (
@@ -152,7 +135,7 @@ export function ProfileScreen() {
     );
   };
 
-  if (videosLoading || mediaLoading || plantsLoading) {
+  if (mediaLoading || plantsLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
@@ -167,6 +150,15 @@ export function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <ProfileImage
+            size={40}
+            imageUrl={user.photoURL}
+            userId={user.uid}
+            editable={false}
+          />
+          <Text style={styles.username}>@{user?.displayName || 'User'}</Text>
+        </View>
         <TouchableOpacity
           style={styles.logoutButton}
           onPress={handleLogout}
@@ -175,64 +167,21 @@ export function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.content}>
-        <ProfileImage
-          size={120}
-          imageUrl={user.photoURL}
-          userId={user.uid}
-          onImageSelected={handleImageSelected}
-          editable
-        />
-        <Text style={[styles.username, { marginTop: 12 }]}>@{user?.displayName || 'User'}</Text>
-      </View>
-
       <View style={styles.profileInfo}>
         <View style={styles.stats}>
-          <StatItem label="Videos" value={videos.length.toString()} />
           <StatItem label="Plants" value={(plants?.length || 0).toString()} />
           <StatItem label="Media" value={media.length.toString()} />
         </View>
       </View>
 
-      <View style={styles.tabs}>
-        <TouchableOpacity
-          style={[styles.tab, selectedTab === 'videos' && styles.selectedTab]}
-          onPress={() => setSelectedTab('videos')}
-        >
-          <Text style={[styles.tabText, selectedTab === 'videos' && styles.selectedTabText]}>Videos</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, selectedTab === 'plants' && styles.selectedTab]}
-          onPress={() => setSelectedTab('plants')}
-        >
-          <Text style={[styles.tabText, selectedTab === 'plants' && styles.selectedTabText]}>Plants</Text>
-        </TouchableOpacity>
-      </View>
-
-      {selectedTab === 'videos' ? (
-        <FlatList
-          data={videos}
-          renderItem={renderVideoItem}
-          keyExtractor={(item) => item.id}
-          numColumns={3}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.videoGrid}
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No videos yet</Text>
-            </View>
-          }
-        />
-      ) : (
-        <ScrollView style={styles.plantsContainer}>
-          {plants?.map(renderPlantSection)}
-          {(!plants || plants.length === 0) && (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No plants yet</Text>
-            </View>
-          )}
-        </ScrollView>
-      )}
+      <ScrollView style={styles.plantsContainer}>
+        {plants?.map(renderPlantSection)}
+        {(!plants || plants.length === 0) && (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>No plants yet</Text>
+          </View>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -258,24 +207,28 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    padding: 16,
-  },
-  logoutButton: {
-    padding: 8,
-  },
-  content: {
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 16,
-  },
-  profileInfo: {
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   username: {
     fontSize: 16,
     fontWeight: 'bold',
+    marginLeft: 12,
+  },
+  logoutButton: {
+    padding: 8,
+  },
+  profileInfo: {
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
   stats: {
     flexDirection: 'row',
@@ -292,64 +245,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
-  videoGrid: {
-    padding: 1,
-  },
-  videoItem: {
-    flex: 1/3,
-    aspectRatio: 1,
-    margin: 1,
-  },
-  thumbnail: {
-    flex: 1,
-  },
-  videoStats: {
-    position: 'absolute',
-    bottom: 4,
-    left: 4,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    padding: 4,
-    borderRadius: 4,
-  },
-  statsText: {
-    color: '#fff',
-    fontSize: 12,
-    marginLeft: 4,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#666',
-  },
-  tabs: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  selectedTab: {
-    borderBottomWidth: 2,
-    borderBottomColor: '#000',
-  },
-  tabText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  selectedTabText: {
-    color: '#000',
-    fontWeight: 'bold',
-  },
   plantsContainer: {
     flex: 1,
   },
@@ -357,8 +252,14 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   plantHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     padding: 16,
     backgroundColor: '#f8f9fa',
+  },
+  plantInfo: {
+    flex: 1,
   },
   plantName: {
     fontSize: 18,
@@ -390,6 +291,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa',
     margin: 8,
     borderRadius: 8,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  growthButton: {
+    backgroundColor: '#4CAF50',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 4,
+  },
+  growthButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
   },
 });
 

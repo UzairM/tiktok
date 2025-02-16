@@ -4,17 +4,16 @@ export interface MediaItem {
   plantId: string
   mediaUrl: string
   uploadedAt: number
+  type: 'image' | 'video'
   aiResult?: {
-    pestDiseases?: string[]
-    healthStatus?: string
-    growthMetrics?: {
-      leafCount?: number
-      heightInCm?: number
-    }
+    healthAnalysis?: string
+    growthAnalysis?: string
   }
 }
 
 export interface CreateMediaDto {
   plantId: string
   mediaUrl: string
+  type: 'image' | 'video'
+  aiResult?: MediaItem['aiResult']
 } 

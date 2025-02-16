@@ -9,6 +9,8 @@ import { UploadScreen } from '../screens/UploadScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { AuthScreen } from '../screens/AuthScreen';
 import { VideoDetailScreen } from '../screens/VideoDetail';
+import { MediaDetailsScreen } from '../screens/MediaDetailsScreen';
+import { GrowthAnalysisScreen } from '../screens/GrowthAnalysisScreen';
 import { useAuth } from '../contexts/AuthContext';
 import { commonStyles } from '../styles/common';
 
@@ -17,58 +19,37 @@ const Tab = createBottomTabNavigator<RootStackParamList>();
 
 function TabNavigator() {
   return (
-    <Tab.Navigator 
-      screenOptions={{ 
-        headerShown: false,
-        tabBarActiveTintColor: '#ff2d55',
-        tabBarInactiveTintColor: '#666',
-        tabBarStyle: {
-          borderTopWidth: 0,
-          elevation: 0,
-          backgroundColor: '#000',
-        }
-      }}
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+
+          if (route.name === 'Feed') {
+            iconName = focused ? 'home' : 'home-outline';
+          } else if (route.name === 'Upload') {
+            iconName = focused ? 'plus-circle' : 'plus-circle-outline';
+          } else if (route.name === 'Profile') {
+            iconName = focused ? 'account' : 'account-outline';
+          }
+
+          return <MaterialCommunityIcons name={iconName as any} size={size} color={color} />;
+        },
+      })}
+      initialRouteName="Profile"
     >
-      <Tab.Screen 
-        name="Feed" 
-        component={FeedScreen}
-        options={{ 
-          tabBarLabel: 'Home',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="home" size={size} color={color} />
-          )
-        }}
-      />
-      <Tab.Screen 
-        name="Upload" 
-        component={UploadScreen}
-        options={{ 
-          tabBarLabel: 'Upload',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="plus-box" size={size} color={color} />
-          )
-        }}
-      />
-      <Tab.Screen 
-        name="Profile" 
-        component={ProfileScreen}
-        options={{ 
-          tabBarLabel: 'Profile',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="account" size={size} color={color} />
-          )
-        }}
-      />
+      {/* <Tab.Screen name="Feed" component={FeedScreen} /> */}
+      <Tab.Screen name="Upload" component={UploadScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
 }
 
 export function RootNavigator() {
-  const { user, isLoading } = useAuth();
+  const { isLoading, user } = useAuth();
 
   if (isLoading) {
     return (
-      <View style={commonStyles.fullScreen}>
+      <View style={commonStyles.center}>
         <ActivityIndicator size="large" />
       </View>
     );
@@ -76,19 +57,40 @@ export function RootNavigator() {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator>
         {!user ? (
-          <Stack.Screen name="Auth" component={AuthScreen} />
+          <Stack.Screen 
+            name="Auth" 
+            component={AuthScreen}
+            options={{ headerShown: false }}
+          />
         ) : (
           <>
-            <Stack.Screen name="Main" component={TabNavigator} />
-            <Stack.Screen 
-              name="VideoDetail" 
+            <Stack.Screen
+              name="Home"
+              component={TabNavigator}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="VideoDetail"
               component={VideoDetailScreen}
+              options={{ title: 'Video Details' }}
+            />
+            <Stack.Screen
+              name="MediaDetails"
+              component={MediaDetailsScreen}
+              options={{ 
+                headerShown: false,
+                presentation: 'fullScreenModal',
+                animation: 'slide_from_right'
+              }}
+            />
+            <Stack.Screen
+              name="GrowthAnalysis"
+              component={GrowthAnalysisScreen}
               options={{
-                headerShown: true,
-                presentation: 'modal',
-                title: 'Video',
+                presentation: 'card',
+                animation: 'slide_from_right'
               }}
             />
           </>

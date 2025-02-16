@@ -59,6 +59,11 @@ api.interceptors.response.use(
         data: error.response?.data,
         headers: error.response?.headers
       });
+
+      // Silently handle 404s for growth analysis
+      if (error.response.status === 404 && error.config?.url?.includes('/growth')) {
+        return Promise.resolve({ data: null });
+      }
     } else if (error.request) {
       // The request was made but no response was received
       console.error('API No Response:', {
@@ -80,5 +85,8 @@ api.interceptors.response.use(
 // API functions
 export const mediaApi = {
   getUserMedia: () => api.get('/media/user').then(res => res.data),
-  getPlantMedia: (plantId: string) => api.get(`/media/plant/${plantId}`).then(res => res.data)
+  getPlantMedia: (plantId: string) => api.get(`/media/plant/${plantId}`).then(res => res.data),
+  getMediaById: (mediaId: string) => api.get(`/media/${mediaId}`).then(res => res.data),
+  analyzeHealth: (mediaId: string) => api.post(`/media/${mediaId}/analyze/health`).then(res => res.data),
+  analyzeGrowth: (mediaId: string) => api.post(`/media/${mediaId}/analyze/growth`).then(res => res.data)
 };

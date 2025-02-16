@@ -20,6 +20,9 @@ RUN mkdir -p src/config
 # Copy service account
 COPY src/config/serviceAccount.json src/config/
 
+# Ensure node_modules is preserved
+
+
 EXPOSE 3000
 
 CMD ["npm", "run", "dev"] 

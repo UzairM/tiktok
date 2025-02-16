@@ -4,6 +4,8 @@ import { db } from '../../config/firebase';
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
+import { AIService } from '../ai/ai.service';
+import { MediaItem } from '../../types/media';
 
 interface ProcessVideoOptions {
   videoId: string;
@@ -27,12 +29,17 @@ interface TranscodeOptions {
 }
 
 export class VideoProcessor {
-  constructor(private storage: StorageService) {}
+  private aiService: AIService;
+
+  constructor(private storage: StorageService) {
+    this.aiService = new AIService();
+  }
 
   async processVideo({ videoId, inputPath }: ProcessVideoOptions): Promise<void> {
     const tempDir = path.join(os.tmpdir(), 'video-processing');
     const videoDir = path.join(tempDir, videoId);
     const thumbnailPath = path.join(tempDir, `${videoId}.jpg`);
+    const framesDir = path.join(tempDir, `${videoId}-frames`);
 
     try {
       // Create temp directories
@@ -42,9 +49,42 @@ export class VideoProcessor {
       if (!fs.existsSync(videoDir)) {
         fs.mkdirSync(videoDir, { recursive: true });
       }
+      if (!fs.existsSync(framesDir)) {
+        fs.mkdirSync(framesDir, { recursive: true });
+      }
 
       // Get video metadata
       const metadata = await this.getVideoMetadata(inputPath);
+
+      // Extract frames for AI analysis
+      const frames = await this.extractFrames(inputPath, framesDir);
+      
+      // Upload frames and get URLs
+      const frameUrls = await Promise.all(
+        frames.map(async (frame) => {
+          const key = `frames/${videoId}/${path.basename(frame)}`;
+          const { url } = await this.storage.uploadFile(
+            {
+              fieldname: 'frame',
+              originalname: path.basename(frame),
+              encoding: '7bit',
+              mimetype: 'image/jpeg',
+              buffer: await fs.promises.readFile(frame),
+              size: (await fs.promises.stat(frame)).size,
+            },
+            key
+          );
+          return url;
+        })
+      );
+
+      // Analyze frames with GPT-4o
+      const aiResults = await Promise.all(
+        frameUrls.map(url => this.aiService.analyzeImage(url))
+      );
+
+      // Aggregate AI results
+      const aggregatedResult = await this.aggregateAIResults(aiResults);
 
       // Generate thumbnail
       await this.generateThumbnail(inputPath, thumbnailPath);
@@ -132,7 +172,7 @@ export class VideoProcessor {
         throw new Error('Failed to get master playlist URL');
       }
 
-      // Update video metadata in Firestore
+      // Update video metadata in Firestore with AI results
       const videoRef = db.collection('videos').doc(videoId);
       await videoRef.update({
         status: 'ready',
@@ -144,7 +184,8 @@ export class VideoProcessor {
         variants: variants.map(v => ({
           resolution: v.resolution,
           bitrate: v.bitrate
-        }))
+        })),
+        aiResult: aggregatedResult
       });
 
     } finally {
@@ -155,6 +196,9 @@ export class VideoProcessor {
         }
         if (fs.existsSync(thumbnailPath)) {
           fs.unlinkSync(thumbnailPath);
+        }
+        if (fs.existsSync(framesDir)) {
+          fs.rmSync(framesDir, { recursive: true, force: true });
         }
       } catch (error) {
         console.error('Error cleaning up temp files:', error);
@@ -288,5 +332,29 @@ export class VideoProcessor {
         .on('end', () => resolve())
         .on('error', (err: Error) => reject(err));
     });
+  }
+
+  private async extractFrames(inputPath: string, outputDir: string): Promise<string[]> {
+    return new Promise((resolve, reject) => {
+      ffmpeg(inputPath)
+        .outputOptions([
+          '-vf', 'fps=1/2', // Extract one frame every 2 seconds
+          '-frame_pts', '1'
+        ])
+        .output(path.join(outputDir, 'frame-%d.jpg'))
+        .on('end', () => {
+          // Get list of generated frames
+          const frameFiles = fs.readdirSync(outputDir)
+            .filter(file => file.startsWith('frame-'))
+            .map(file => path.join(outputDir, file));
+          resolve(frameFiles);
+        })
+        .on('error', (err: Error) => reject(err))
+        .run();
+    });
+  }
+
+  private async aggregateAIResults(results: Array<MediaItem['aiResult']>): Promise<MediaItem['aiResult']> {
+    return this.aiService.aggregateVideoAnalyses(results);
   }
 } 

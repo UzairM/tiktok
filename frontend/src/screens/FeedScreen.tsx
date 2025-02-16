@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
-import { View, FlatList, StyleSheet, ActivityIndicator, Text, ViewToken, useWindowDimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { View, FlatList, StyleSheet, ActivityIndicator, Text, ViewToken, useWindowDimensions, NativeSyntheticEvent, NativeScrollEvent, Image } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useIsFocused } from '@react-navigation/native';
 import { VideoPlayer } from '../components/video/VideoPlayer';
-import { useVideos } from '../hooks/useVideos';
-import { useLike } from '../hooks/useLike';
-import type { VideoMetadata } from '../types/video';
+import { useAllMedia } from '../hooks/useAllMedia';
+import type { Media } from '../hooks/useUserMedia';
+import { Video, ResizeMode } from 'expo-av';
 
 interface ViewableItemsChanged {
   viewableItems: ViewToken[];
@@ -13,9 +13,8 @@ interface ViewableItemsChanged {
 }
 
 export function FeedScreen() {
-  const { videos, isLoading, error, fetchNextPage } = useVideos();
-  const { toggleLike } = useLike();
-  const [activeVideoIndex, setActiveVideoIndex] = useState(0);
+  const { media, isLoading, error, fetchNextPage, hasNextPage } = useAllMedia();
+  const [activeIndex, setActiveIndex] = useState(0);
   const isFocused = useIsFocused();
   const flatListRef = useRef<FlatList>(null);
   const { height: windowHeight } = useWindowDimensions();
@@ -24,7 +23,7 @@ export function FeedScreen() {
   // Calculate height accounting for bottom tab bar (which is typically 49px) and any additional bottom insets
   const TAB_BAR_HEIGHT = 49;
   const BOTTOM_SPACE = Math.max(TAB_BAR_HEIGHT, insets.bottom + TAB_BAR_HEIGHT);
-  const videoHeight = windowHeight - BOTTOM_SPACE;
+  const mediaHeight = windowHeight - BOTTOM_SPACE;
 
   const viewabilityConfig = useRef({
     itemVisiblePercentThreshold: 80,
@@ -35,37 +34,55 @@ export function FeedScreen() {
   const handleViewableItemsChanged = useRef(({ viewableItems }: ViewableItemsChanged) => {
     if (viewableItems.length > 0) {
       const index = viewableItems[0].index ?? 0;
-      setActiveVideoIndex(index);
+      setActiveIndex(index);
     }
   }).current;
 
   const handleMomentumScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offset = e.nativeEvent.contentOffset.y;
-    const index = Math.round(offset / videoHeight);
-    if (index !== activeVideoIndex) {
-      setActiveVideoIndex(index);
+    const index = Math.round(offset / mediaHeight);
+    if (index !== activeIndex) {
+      setActiveIndex(index);
     }
   };
 
-  const handleLike = async (video: VideoMetadata) => {
-    try {
-      await toggleLike(video.id);
-    } catch (error) {
-      console.error('Failed to like video:', error);
+  const handleEndReached = () => {
+    if (hasNextPage && !isLoading) {
+      fetchNextPage();
     }
   };
 
-  const renderItem = ({ item: video, index }: { item: VideoMetadata; index: number }) => (
-    <VideoPlayer
-      video={video}
-      shouldPlay={index === activeVideoIndex && isFocused}
-      isMuted={false}
-      onLike={() => handleLike(video)}
-      onDoubleTap={() => handleLike(video)}
-    />
-  );
+  const renderItem = ({ item, index }: { item: Media; index: number }) => {
+    const isVideo = item.mediaUrl.endsWith('.mp4');
 
-  if (isLoading && !videos.length) {
+    return (
+      <View style={[styles.mediaContainer, { height: mediaHeight }]}>
+        {isVideo ? (
+          <Video
+            source={{ uri: item.mediaUrl }}
+            style={styles.media}
+            resizeMode={ResizeMode.CONTAIN}
+            shouldPlay={index === activeIndex && isFocused}
+            isLooping
+            isMuted={false}
+          />
+        ) : (
+          <Image
+            source={{ uri: item.mediaUrl }}
+            style={styles.media}
+            resizeMode="contain"
+          />
+        )}
+        {index === media.length - 1 && !hasNextPage && (
+          <View style={styles.endOfFeedContainer}>
+            <Text style={styles.endOfFeedText}>No more content</Text>
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  if (isLoading && !media.length) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
@@ -79,7 +96,7 @@ export function FeedScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Failed to load videos</Text>
+          <Text style={styles.errorText}>Failed to load media</Text>
         </View>
       </SafeAreaView>
     );
@@ -89,21 +106,21 @@ export function FeedScreen() {
     <SafeAreaView style={styles.container}>
       <FlatList
         ref={flatListRef}
-        data={videos}
+        data={media}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => `${item.id}-${item.createdAt}`}
         pagingEnabled
         showsVerticalScrollIndicator={false}
         onViewableItemsChanged={handleViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
-        onEndReached={fetchNextPage}
+        onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}
         getItemLayout={(_, index) => ({
-          length: videoHeight,
-          offset: videoHeight * index,
+          length: mediaHeight,
+          offset: mediaHeight * index,
           index,
         })}
-        snapToInterval={videoHeight}
+        snapToInterval={mediaHeight}
         snapToAlignment="start"
         decelerationRate={0.9}
         onMomentumScrollEnd={handleMomentumScrollEnd}
@@ -112,6 +129,10 @@ export function FeedScreen() {
         windowSize={3}
         removeClippedSubviews={true}
         scrollEventThrottle={16}
+        maintainVisibleContentPosition={{
+          minIndexForVisible: 0,
+          autoscrollToTopThreshold: 10
+        }}
       />
     </SafeAreaView>
   );
@@ -135,5 +156,28 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#fff',
     fontSize: 16,
+  },
+  mediaContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000',
+  },
+  media: {
+    width: '100%',
+    height: '100%',
+  },
+  endOfFeedContainer: {
+    position: 'absolute',
+    bottom: 40,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    padding: 8,
+  },
+  endOfFeedText: {
+    color: '#fff',
+    fontSize: 14,
   },
 });

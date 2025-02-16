@@ -3,23 +3,27 @@ import { StyleSheet } from 'react-native';
 export const commonStyles = StyleSheet.create({
   fullScreen: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: '#fff',
   },
   centerContent: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 8,
+    marginBottom: 16,
   },
   subtitle: {
     fontSize: 16,
     color: '#666',
-    marginBottom: 20,
-    textAlign: 'center',
+    marginBottom: 24,
   },
 });

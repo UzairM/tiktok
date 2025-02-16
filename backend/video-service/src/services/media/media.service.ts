@@ -1,5 +1,6 @@
 import { db } from '../../config/firebase'
 import { MediaItem, CreateMediaDto } from '../../types/media'
+import type { Query, DocumentData } from 'firebase-admin/firestore'
 
 export class MediaService {
   private readonly collection = 'media'
@@ -9,11 +10,28 @@ export class MediaService {
       userId,
       plantId: dto.plantId,
       mediaUrl: dto.mediaUrl,
-      uploadedAt: Date.now()
+      type: dto.type,
+      uploadedAt: Date.now(),
+      ...(dto.aiResult && { aiResult: dto.aiResult })
     }
 
     const docRef = await db.collection(this.collection).add(mediaData)
     return { id: docRef.id, ...mediaData }
+  }
+
+  async updateAIResult(mediaId: string, aiResult: MediaItem['aiResult']): Promise<void> {
+    // Filter out undefined values
+    const updateData = {
+      aiResult: Object.fromEntries(
+        Object.entries(aiResult || {}).filter(([_, value]) => value !== undefined)
+      )
+    };
+
+    // Only update if there are valid values
+    if (Object.keys(updateData.aiResult).length > 0) {
+      const docRef = db.collection(this.collection).doc(mediaId);
+      await docRef.update(updateData);
+    }
   }
 
   async getMediaByUserId(userId: string): Promise<MediaItem[]> {
@@ -50,5 +68,10 @@ export class MediaService {
 
   async deleteMedia(mediaId: string): Promise<void> {
     await db.collection(this.collection).doc(mediaId).delete()
+  }
+
+  getFeedQuery(): Query<DocumentData> {
+    return db.collection(this.collection)
+      .orderBy('uploadedAt', 'desc')
   }
 } 

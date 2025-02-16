@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { apiClient } from '../api/client';
+import { api } from '../api/client';
 import type { VideoMetadata } from '../types/video';
 
 export function useUserVideos(userId: string | undefined) {
@@ -16,7 +16,7 @@ export function useUserVideos(userId: string | undefined) {
       }
 
       try {
-        const response = await apiClient.get(`/videos/user/${userId}`);
+        const response = await api.get(`/videos/user/${userId}`);
         setVideos(response.data.videos);
         setError(null);
       } catch (err) {

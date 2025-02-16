@@ -1,13 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { mediaApi } from '../api/client';
+import { MediaItem } from '../types/media';
 
-export interface Media {
-  id: string;
-  userId: string;
-  plantId: string;
-  mediaUrl: string;
-  createdAt: string;
-}
+export type Media = MediaItem;
 
 export function useUserMedia(userId: string | undefined) {
   const { data: media = [], isLoading, error } = useQuery({
